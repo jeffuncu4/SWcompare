@@ -27,6 +27,7 @@ num_iter = par_dict['num_iter']
 dt = par_dict['dt']
 save_iter = par_dict['save_iter']
 max_writes = par_dict['max_writes']
+vortex_name = par_dict['vortex_name']
 
 
 uw = par_dict['uw']
@@ -106,7 +107,7 @@ h = solver.state['h']
 
 
 # import geostorphic flow for initial conditions
-geoData = h5py.File(exp_dir + 'IC/settled_vortex_expanded.h5', 'r')
+geoData = h5py.File(exp_dir + 'IC/' + 'expanded_' + vortex_name , 'r')
 
 h['g'] = geoData.get('geoH')[slices]
 u['g'] = geoData.get('geoU')[slices]

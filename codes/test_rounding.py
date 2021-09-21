@@ -25,9 +25,9 @@ stop = 4000.0
 step = 1000.0
 
 
-start = 0.
-stop = 0.9
-step = 0.001
+start = 0.0
+stop = 1
+step = 1/3.
 
 l = round_arange(start, stop, step)
 print (l)

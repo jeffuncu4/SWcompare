@@ -10,7 +10,7 @@ import numpy as np
 import h5py
 import numpy.fft as fft
 from scipy import interpolate
-
+import matplotlib.pyplot as plt
 
 #
 class Analysis:
@@ -34,9 +34,10 @@ class Analysis:
         
         self.g = self.par_dict['g']
         self.Ly = self.par_dict['Ly']
-        self.dt = self.par_dict['dt']
+
         self.omega = self.par_dict['omega']
         self.l = self.par_dict['l']
+        self.wavelength = self.par_dict['wavelength']
         
         self.c_rot = self.omega/self.l
         
@@ -60,12 +61,7 @@ class Analysis:
         self.omega_array = fft.fftshift(fft.fftfreq(self.nt, d=self.dt)*2 *np.pi)
         print (np.shape(self.u))
         
-    def crop(self):
-        t1_ind = int(self.Ly/self.c_rot*0.8/self.dt)
-        t2_ind = int(self.Ly/self.c_rot*1.2/self.dt)
-        self.u = self.u[t1_ind:t2_ind]
-        print (np.shape(self.u))
-#    
+
     def filter_vortex(self, data):
         
         # I need to crop to the time after the wave has crossed the vortex
@@ -74,17 +70,22 @@ class Analysis:
                                   key=lambda x: abs(x[1]-t_passed_vortex))
         print (t_passed_vortex_index, 't_passed vortex index HERE')
         
+        
+        
         cropped_omega_array =  fft.fftshift(fft.fftfreq(self.nt - t_passed_vortex_index, d=self.dt)*2 *np.pi)
+        
+        
+        
         
         data = data[t_passed_vortex_index:, :, :]
         
         h_fft_time = fft.fftshift(fft.fft(data, axis = 0), axes=(0,))
         
         omega1_ind, closest_val = min(enumerate(cropped_omega_array), 
-                                  key=lambda x: abs(x[1]+self.omega/5.))
+                                  key=lambda x: abs(x[1]+self.omega/3.))
         
         omega2_ind, closest_val = min(enumerate(cropped_omega_array), 
-                                  key=lambda x: abs(x[1]-self.omega/5.))
+                                  key=lambda x: abs(x[1]-self.omega/3.))
         print (omega1_ind, omega2_ind)
         h_vortex_fft_time = np.zeros(np.shape(h_fft_time), dtype = complex)
         
@@ -99,10 +100,56 @@ class Analysis:
 
     def wave_propogation_spectra(self, data):
         
+#        wavelengths_crop = 6
+#        x1 = -self.wavelength*wavelengths_crop
+#        x2 = self.wavelength*wavelengths_crop
+#        
+#        y1 = -self.wavelength*wavelengths_crop
+#        y2 = self.wavelength*wavelengths_crop
+        
+        x1 = 0
+        x2 = self.Ly/2 - self.wavelength
+        
+        y1 = -1*x2/2
+        y2 = 1*x2/2
+        
+        
+        y1_vortex_index, y1_closest_val = min(enumerate(self.x_axis), 
+                                  key=lambda x: abs(x[1]-y1))
+
+        y2_vortex_index, y2_closest_val = min(enumerate(self.x_axis), 
+                                  key=lambda x: abs(x[1]-y2))
+
+        
+        
+        
+        x1_vortex_index, x1_closest_val = min(enumerate(self.x_axis), 
+                                  key=lambda x: abs(x[1]-x1))
+
+        x2_vortex_index, x2_closest_val = min(enumerate(self.x_axis), 
+                                  key=lambda x: abs(x[1]-x2))
+
+                
         h_filtered, h_vortex = self.filter_vortex(data)
+        h_filtered = h_filtered[:, y1_vortex_index:y2_vortex_index + 1, x1_vortex_index:x2_vortex_index + 1]
         h_fft_time = fft.fftshift(fft.fft(h_filtered, axis = 0), axes=(0,))
         
-        negative_indices  = np.where(self.omega_array <0)
+        
+        t_passed_vortex = self.Ly/self.c_rot*0.9
+        t_passed_vortex_index, t_passed_closest_val = min(enumerate(self.time_axis), 
+                                  key=lambda x: abs(x[1]-t_passed_vortex))
+        print (t_passed_vortex_index, 't_passed vortex index HERE')
+        
+        
+
+        plt.imshow(np.real(h_filtered[-1]))
+        plt.title('cropped version of  h filtered')
+        plt.show()
+        
+        
+        cropped_omega_array =  fft.fftshift(fft.fftfreq(self.nt - t_passed_vortex_index, d=self.dt)*2 *np.pi)
+        
+        negative_indices  = np.where(cropped_omega_array <0)
         lst_neg_ind = negative_indices[0][-1]
         
         h_fft_time[:lst_neg_ind+1 ] = 0.
@@ -111,9 +158,20 @@ class Analysis:
         h_fft_time_space = fft.fftshift(fft.fft2(h_fft_time), axes=(1,2))
         return h_fft_time_space
     
+    
     def wave_propogation_spectra_omega(self,  data):
+        
+        t_passed_vortex = self.Ly/self.c_rot*0.9
+        t_passed_vortex_index, t_passed_closest_val = min(enumerate(self.time_axis), 
+                                  key=lambda x: abs(x[1]-t_passed_vortex))
+        print (t_passed_vortex_index, 't_passed vortex index HERE')
+        
+        
+        cropped_omega_array =  fft.fftshift(fft.fftfreq(self.nt - t_passed_vortex_index, d=self.dt)*2 *np.pi)
+        
+        
         h_fft_time_space = self.wave_propogation_spectra( data)
-        omega_ind, closest_val = min(enumerate(self.omega_array), 
+        omega_ind, closest_val = min(enumerate(cropped_omega_array), 
                                      key=lambda x: abs(x[1]-self.omega))
         print ('im omega_ind', omega_ind)
         return h_fft_time_space[omega_ind]
@@ -166,8 +224,8 @@ class Analysis:
 #        
 #        return h_filtered, h_slice
 #    
-#    def wavenumber_circle(self, omega_sim, omega_val, wavenumber_mag):
-#        h_fft_time_space = self.wave_propogation_spectra_omega(omega_sim,  omega_val)
+#    def wavenumber_circle(self):
+#        h_fft_time_space = self.wave_propogation_spectra_omega( self.h)
 #
 #        f_int = interpolate.interp2d(self.k, self.l, np.abs(h_fft_time_space), kind='linear')
 #        
@@ -177,7 +235,7 @@ class Analysis:
 #            return (x, y)
 #    
 #        theta_array = np.arange(0, np.pi*2, np.pi*2./1000)
-#        xp, yp = pol2cart(wavenumber_mag,  theta_array)
+#        xp, yp = pol2cart(self.l,  theta_array)
 #        valp = f_int(xp, yp)
 #        valp = []
 #        
@@ -185,13 +243,18 @@ class Analysis:
 #            valp.append(f_int(xp[i], yp[i])[0])
 #        
 #        return theta_array, np.array(valp)
-            
+#            
 
     def flux_vector(self):
-        u_squared = self.u**2 + self.v**2
-        mult = self.g*self.h**2  + self.h*u_squared/2 
-        Fx = self.u*mult
-        Fy = self.v*mult
+        
+        u_filtered_cropped, temp = self.filter_vortex(self.u)
+        v_filtered_cropped, temp = self.filter_vortex(self.v)
+        h_filtered_cropped, temp = self.filter_vortex(self.h)
+        
+        u_squared = u_filtered_cropped**2 + v_filtered_cropped**2
+        mult = self.g*h_filtered_cropped**2  + h_filtered_cropped*u_squared/2 
+        Fx = u_filtered_cropped*mult
+        Fy = v_filtered_cropped*mult
         flux = np.array([Fx, Fy])
         return flux
     
@@ -199,12 +262,12 @@ class Analysis:
         flux = self.flux_vector()
         return np.linalg.norm(flux, axis= 0)
     
-    def flux_wave_averaged(self, t_index, omega):
+    def flux_wave_averaged(self, omega):
         fx, fy = self.flux_vector()
-        
+        t_index = 0
         wave_period = np.pi*2/omega
-        t_length = int(wave_period/self.dt) # this shouold be an input
-        print ('wave_period from flux wave_averaged:   ', wave_period,t_index, t_length )
+        t_length = int(wave_period/(self.dt)) # this shouold be an input
+        print ('wave_period from flux wave_averaged:   ', wave_period,t_index, t_length, (self.dt) )
         fx = fx[t_index: t_index + t_length + 1 , :, :]
         fy = fy[t_index: t_index + t_length + 1]
         fx_average = np.trapz(fx, dx = self.dt,  axis = 0)
@@ -212,8 +275,18 @@ class Analysis:
         
         return np.array([fx_average, fy_average])/(t_length*self.dt)
     
-    def flux_wave_averaged_mag(self, t_index, omega):
-        return np.linalg.norm(self.flux_wave_averaged(t_index, omega), axis = 0)
+    def flux_wave_averaged_mag(self,  omega):
+        return np.linalg.norm(self.flux_wave_averaged( omega), axis = 0)
+    
+    def flux_difference(self):
+        flux_mag = self.flux_wave_averaged_mag(self.omega)
+        
+        diff = np.max(flux_mag) - np.min(flux_mag)
+        flux_incoming = 1 # palce holder
+        return diff/flux_incoming
+    
+    def flux_angle(self):
+        return None
     
 #
 

@@ -11,7 +11,7 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
-
+import pickle
 
 exp_dir = '../experiments/' + sys.argv[1] + '/'
 
@@ -38,11 +38,26 @@ ta = file['scales']['sim_time']
 
 
 
+par_dict = pickle.load(open(exp_dir + 'IC/parameters.pkl', 'rb'))
+
+Ro = par_dict['Ro']
+Bu = par_dict['Bu']
+vortex_name = par_dict['vortex_name']
+
+
 
 saveData=True
 if saveData:   
-    hf = h5py.File(exp_dir + 'IC/settled_vortex.h5', 'w')
+    hf = h5py.File(exp_dir + 'IC/' + vortex_name, 'w')
     hf.create_dataset('geoH', data=h[-1])
     hf.create_dataset('geoU', data=u[-1])
     hf.create_dataset('geoV', data=v[-1])
     hf.close()
+    
+
+ 
+    hv = h5py.File('../vortices/' + vortex_name, 'w')
+    hv.create_dataset('geoH', data=h[-1])
+    hv.create_dataset('geoU', data=u[-1])
+    hv.create_dataset('geoV', data=v[-1])
+    hv.close()

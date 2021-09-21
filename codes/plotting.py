@@ -108,14 +108,19 @@ def pic_num(n):
 
 # use fig, ax tomorrow to do this properly. also automize dimensions
 extent = np.array([-Ly/2, Ly/2, -Lx/2, Lx/2])/Ld
+#
+#
+#from matplotlib.colors import TwoSlopeNorm
+
+#
+#save_name = ['u', 'v', 'h']
+#
+#field_names = {'u': u, 'v': v, 'h': h}
 
 
-from matplotlib.colors import TwoSlopeNorm
+save_name = ['h']
 
-
-save_name = ['u', 'v', 'h']
-
-field_names = {'u': u, 'v': v, 'h': h}
+field_names = {'h': h}
 
 for name in field_names:
     for i in range(0, n, 1):    
