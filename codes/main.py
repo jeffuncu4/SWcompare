@@ -121,7 +121,7 @@ solver.stop_sim_time = np.inf
 solver.stop_wall_time = np.inf
 
 
-analysis = solver.evaluator.add_file_handler(exp_dir + 'data', iter=save_iter, max_writes=max_writes)
+analysis = solver.evaluator.add_file_handler(exp_dir + 'data', iter=save_iter, max_writes=max_writes) # save by sim time
 analysis.add_system(solver.state, layout='g')
 
 from dedalus.extras import flow_tools

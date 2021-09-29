@@ -75,7 +75,7 @@ def circular_window(x, y, L):
     return window        
             
 
-plot = True
+plot = False
 if plot:
     cs['g'] = circular_window(x, y, L)
     plt.subplot(2,1,1)

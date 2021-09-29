@@ -31,7 +31,8 @@ class Simulation:
         self.exp_dir = '../experiments/' + self.exp_name + '/'
         self.vortex_dir = '../vortices/'
         self.vortex_name = 'Ro{}Bu{}_vortex.h5'.format(self.Ro, self.Bu)
-                                                                  
+                        
+        print (self.exp_name + ' initialized')                                          
 
 #        self.sim_executed = 'state1.h5' in os.listdir(self.exp_dir + 'data')
 #        self.analytics_executed = 'somefile' in os.listdir("experiments/{}/analysis/"
@@ -82,10 +83,15 @@ class Simulation:
         self.sponge_window_length_wavelength = 1.
         self.geo_window_length_ratio = 0.2 # doesnt do anyting rn
         
-        if self.Lr >1:
-            self.nx = 640
+#        if self.Lr >=1:
+#            self.nx = 640
+#        else:
+#            self.nx = 1280
+#            
+        if self.Lr >=1:
+            self.nx = 512
         else:
-            self.nx = 1280
+            self.nx = 1024
         # I choose to define dx, dt for the simulation Nondim# 
         #Keep in mind I neeed to satisfy some sort of cfl condition with dt <  C*dx/U
         self.CFL_constant = 0.002
@@ -103,7 +109,7 @@ class Simulation:
         self.ny = self.nx*self.L_aspect
         self.forcing_window_length = self.forcing_window_length_wavelength*(np.pi*2/self.l)
         self.sponge_window_length = self.sponge_window_length_wavelength*(np.pi*2/self.l)
-        self.geo_window_length = self.geo_window_length_ratio*(np.pi*2/self.l)
+        self.geo_window_length = self.geo_window_length_ratio*(np.pi*2/self.l) # dont think I m using this
         
         
         self.inertial_period = np.pi*2/self.f
@@ -113,12 +119,16 @@ class Simulation:
         
         #Other Numbers which are relevant 
         self.T_wave = np.pi*2/self.omega        
-
-        self.save_iter = 10 # main sim save iteration
+        
+        saved_points_per_wave_period = 10
+        dt_save = self.T_wave/saved_points_per_wave_period
+        self.save_iter = int(dt_save/self.dt)
+        
+        #self.save_iter = 10 # function of wave period main sim save iteration
         self.num_iter = int(self.Ts/self.dt)
         
         self.save_iter_vortex= 10 # I dont think this is even in use
-        self.num_iter_vortex = int(self.inertial_period*.5/self.dt)
+        self.num_iter_vortex = int(self.inertial_period*1/self.dt)
         
         self.max_writes = 100000        
         
@@ -188,7 +198,7 @@ class Simulation:
             print (' copied vortex into experiment folder')
             return None
         
-        subprocess.call(self.bash_script_dir +"run_vortex_sim.sh {}".format(self.exp_name), shell=True)
+        subprocess.call(self.bash_script_dir + "run_vortex_sim.sh {}".format(self.exp_name), shell=True)
     
         
     def run_main_sim(self, run_if_created = False): #this creates and runs the simulation

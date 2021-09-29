@@ -26,15 +26,39 @@ def round_arange(start, stop, step):
 
 
 #
-#Ro = 0.01 # must make these floats for proper naming conventions
+Ro = 0.01 # must make these floats for proper naming conventions
 Bu = 1.
-#Lr = 5.
+Lr = 4.
 Ur = 1000.
 
-for ro in  (0.01,  0.03, 0.05):
-    for lr in (1, 2, 3, 4, 5, 0.5, 0.33):
-        exp = Simulation(ro, Bu, lr, Ur)
-        exp.run_sim()
+exp = Simulation(Ro, Bu, Lr, Ur)
+exp.run_sim()
+
+
+
+
+ana = exp.analysis
+
+flux = ana.flux_omega_averaged()
+#
+#plt.imshow(flux[1])
+#plt.colorbar()
+#plt.show()
+#plt.imshow(flux[0])
+#plt.colorbar()
+#plt.show()
+
+plt.imshow(np.sqrt(flux[1]**2 + flux[0]**2))
+plt.colorbar()
+plt.show()
+#
+#plt.imshow((flux[0]**2 + flux[1]**2)**0.5)
+#plt.show()
+
+#for ro in  (0.01,  0.03, 0.05):
+#    for lr in (1, 2, 3, 4, 5, 0.5, 0.33):
+#        exp = Simulation(ro, Bu, lr, Ur)
+#        exp.run_sim()
         
 #
 #for lr in np.arange(1, 6, 1):
@@ -58,7 +82,7 @@ for ro in  (0.01,  0.03, 0.05):
 
 
 ##
-#exp1.plots.view('h')
+exp.plots.view('h')
 #exp1.plots.view('v')
 #exp1.plots.view('u')
 #print (exp1.analysis.u)

@@ -38,6 +38,7 @@ class Analysis:
         self.omega = self.par_dict['omega']
         self.l = self.par_dict['l']
         self.wavelength = self.par_dict['wavelength']
+        self.H = self.par_dict['H']
         
         self.c_rot = self.omega/self.l
         
@@ -48,7 +49,7 @@ class Analysis:
         self.time_axis = np.array(data_file['scales']['sim_time'])
         self.x_axis = np.array(data_file['scales']['x']['1.0'])
         self.y_axis = np.array(data_file['scales']['y']['1.0'])
-        self.dt = self.time_axis[1]-self.time_axis[0]
+        self.dt = self.time_axis[1]-self.time_axis[0] # note this is not the dt the simulation ran at
         self.dx = self.x_axis[1] - self.x_axis[0]
         self.nt = len(self.time_axis)
         self.nx = len(self.x_axis)
@@ -74,8 +75,8 @@ class Analysis:
         
         cropped_omega_array =  fft.fftshift(fft.fftfreq(self.nt - t_passed_vortex_index, d=self.dt)*2 *np.pi)
         
-        
-        
+        #T =  np.pi*2/self.omega
+       # period_index_length = int(T/self.dt)
         
         data = data[t_passed_vortex_index:, :, :]
         
@@ -245,56 +246,152 @@ class Analysis:
 #        return theta_array, np.array(valp)
 #            
 
-    def flux_vector(self):
+#    def flux_vector(self):
+#        
+#        u_filtered_cropped, temp = self.filter_vortex(self.u)
+#        v_filtered_cropped, temp = self.filter_vortex(self.v)
+#        h_filtered_cropped, temp = self.filter_vortex(self.h)
+#        
+#        u_squared = u_filtered_cropped**2 + v_filtered_cropped**2
+#        mult = self.g*h_filtered_cropped**2  + h_filtered_cropped*u_squared/2 
+#        Fx = u_filtered_cropped*mult
+#        Fy = v_filtered_cropped*mult
+#        flux = np.array([Fx, Fy])
+#        return flux
+#    
+#    def flux_magnitude(self):
+#        flux = self.flux_vector()
+#        return np.linalg.norm(flux, axis= 0)
+#    
+#    def flux_wave_averaged(self, omega):
+#        fx, fy = self.flux_vector()
+#        t_index = 0
+#        wave_period = np.pi*2/omega
+#        t_length = int(wave_period/(self.dt)) # this shouold be an input
+#        print ('wave_period from flux wave_averaged:   ', wave_period,t_index, t_length, (self.dt) )
+#        fx = fx[t_index: t_index + t_length + 0 , :, :]
+#        fy = fy[t_index: t_index + t_length + 0]
+#        fx_average = np.trapz(fx, dx = self.dt,  axis = 0)
+#        fy_average = np.trapz(fy, dx = self.dt,  axis = 0)
+#        
+#        return np.array([fx_average, fy_average])/(t_length*self.dt)
+#    
+#    def flux_wave_averaged_mag(self,  omega):
+#        return np.linalg.norm(self.flux_wave_averaged( omega), axis = 0)
+#    
+#    def flux_difference(self):
+#        flux_mag = self.flux_wave_averaged_mag(self.omega)
+#        
+#        diff = np.max(flux_mag) - np.min(flux_mag)
+#        flux_incoming = 1 # palce holder
+#        return diff/flux_incoming
+#    
+#    def flux_angle(self):
+#        return None
+    
+    
+    def flux_omega_averaged(self):
+        t_passed_vortex = self.Ly/self.c_rot*0.9
+        t1 = self.closest_ind(self.time_axis, t_passed_vortex)
+        wave_period = np.pi*2/self.omega
+        wave_average = wave_period*5
         
-        u_filtered_cropped, temp = self.filter_vortex(self.u)
-        v_filtered_cropped, temp = self.filter_vortex(self.v)
-        h_filtered_cropped, temp = self.filter_vortex(self.h)
+        t2 = t1 + int(wave_average/self.dt) 
         
-        u_squared = u_filtered_cropped**2 + v_filtered_cropped**2
-        mult = self.g*h_filtered_cropped**2  + h_filtered_cropped*u_squared/2 
-        Fx = u_filtered_cropped*mult
-        Fy = v_filtered_cropped*mult
-        flux = np.array([Fx, Fy])
-        return flux
-    
-    def flux_magnitude(self):
-        flux = self.flux_vector()
-        return np.linalg.norm(flux, axis= 0)
-    
-    def flux_wave_averaged(self, omega):
-        fx, fy = self.flux_vector()
-        t_index = 0
-        wave_period = np.pi*2/omega
-        t_length = int(wave_period/(self.dt)) # this shouold be an input
-        print ('wave_period from flux wave_averaged:   ', wave_period,t_index, t_length, (self.dt) )
-        fx = fx[t_index: t_index + t_length + 1 , :, :]
-        fy = fy[t_index: t_index + t_length + 1]
-        fx_average = np.trapz(fx, dx = self.dt,  axis = 0)
-        fy_average = np.trapz(fy, dx = self.dt,  axis = 0)
+        #print (np.max(self.x_axis), self. Ly/2, self.wavelength)
+        zoom_index=  200
+        x1 =  zoom_index  #self.closest_ind(self.x_axis , -self.Ly/2 + self.wavelength*2)
+        x2 =  self.nx - zoom_index  #self.closest_ind(self.x_axis , self.Ly/2 - self.wavelength*2)
         
-        return np.array([fx_average, fy_average])/(t_length*self.dt)
-    
-    def flux_wave_averaged_mag(self,  omega):
-        return np.linalg.norm(self.flux_wave_averaged( omega), axis = 0)
-    
-    def flux_difference(self):
-        flux_mag = self.flux_wave_averaged_mag(self.omega)
         
-        diff = np.max(flux_mag) - np.min(flux_mag)
-        flux_incoming = 1 # palce holder
-        return diff/flux_incoming
+        # cropped fields 
+        u_crop = self.u[t1:t2, x1:x2, x1:x2]
+        v_crop = self.v[t1:t2, x1:x2, x1:x2]
+        h_crop = self.h[t1:t2, x1:x2, x1:x2] - self.H
+        t_crop = self.time_axis[t1:t2]
+        
+        
+        omega_array =  fft.fftshift(fft.fftfreq(len(t_crop), d=self.dt)*2 *np.pi)
+        omega_ind = self.closest_ind(omega_array, self.omega)
+        
+        
+        u_fft_time = fft.fftshift(fft.fft(u_crop, axis = 0), axes=(0,))
+        v_fft_time = fft.fftshift(fft.fft(v_crop, axis = 0), axes=(0,))
+        h_fft_time = fft.fftshift(fft.fft(h_crop, axis = 0), axes=(0,))
+        
+        N = 100
+        dt_fine = wave_period/N
+        t_fine = np.arange(t_crop[0], t_crop[0] + wave_average + dt_fine , dt_fine)
+        
+       # t_fine = np.linspace(t_crop[0], t_crop[0] + wave_average, N)
+        
+        def create_wave(sin_coeff, cos_coeff, time, omega):
+            return sin_coeff*np.sin(time[:, None, None]*omega) + cos_coeff*np.cos(time[:, None, None]*omega)
+        
+#        sin_coeff = np.imag(u_fft_time[omega_ind])
+#        cos_coeff = np.real(u_fft_time[omega_ind])
+        
+        u_fine = create_wave(np.imag(u_fft_time[omega_ind]),
+                             np.real(u_fft_time[omega_ind]), t_fine, self.omega)
+        v_fine = create_wave(np.imag(v_fft_time[omega_ind]), 
+                             np.real(v_fft_time[omega_ind]), t_fine, self.omega)
+        h_fine = create_wave(np.imag(h_fft_time[omega_ind]), 
+                             np.real(h_fft_time[omega_ind]), t_fine, self.omega) + self.H
+        
+        u_squared = u_fine**2 + v_fine**2
+        mult = self.g*h_fine**2  + h_fine*u_squared/2 
+        Fx = u_fine*mult
+        Fy = v_fine*mult
+        
+        fx_average = np.trapz(Fx, dx = self.dt,  axis = 0)/wave_average
+        fy_average = np.trapz(Fy, dx = self.dt,  axis = 0)/wave_average
+        
+        return fx_average, fy_average
     
-    def flux_angle(self):
-        return None
-    
+#    def flux_difference_omega(self):
+#        fx, fy = self.flux_omega_averaged()
+#        flux_mag = np.sqrt(fx**2 + fy**2 )
+#        
+#        #crop 
 #
+#        print (np.max(self.x_axis), self. Ly/2, self.wavelength)
+#        x1 = self.closest_ind(self.x_axis , -self.Ly/2 + self.wavelength*10)
+#        x2 = self.closest_ind(self.x_axis , self.Ly/2 - self.wavelength*10)
+#        
+#        print ( x1, x2)
+#        flux_mag_cropped = flux_mag[x1:x2, x1:x2]
+#        
+#        plt.imshow(flux_mag_cropped/flux_mag[100,100])
+#        plt.colorbar()
+#        plt.show()
+#        
+#        diff = np.max(flux_mag_cropped) - np.min(flux_mag_cropped)
+#        flux_incoming = flux_mag[0,0]
+#        return diff/flux_incoming
 
-    
+    def closest_ind(self, array, value):
+        index, val =  min (enumerate(array), key=lambda x: abs(x[1]-value))
+        return index
 
 
 
 
 
 
-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
