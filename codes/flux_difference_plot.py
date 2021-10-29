@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 
 Bu =1.
 Ur = 1000.
-lrs = (2., 0.5, )
+lrs = (1. , 2. )
 ros = (0.005, 0.01)
 
 #flux_difs = np.zeros[len(ros), len(lrs)]
@@ -41,11 +41,11 @@ for i, ro in  enumerate(ros):
     for j, lr in enumerate(lrs):
         exp = Simulation(ro, Bu, lr, Ur)
         exp.run_sim()
-        fx, fy = exp.analysis.flux_omega_averaged()
-        F = (fx**2 +fy**2)**0.5
-        plt.imshow(F)
-        plt.colorbar()
-        plt.show()
+#        fx, fy = exp.analysis.flux_omega_averaged()
+#        F = (fx**2 +fy**2)**0.5
+#        plt.imshow(F)
+#        plt.colorbar()
+#        plt.show()
         
 #
 #for i, ro in enumerate(ros):

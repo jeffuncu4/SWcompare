@@ -113,7 +113,9 @@ h['g'] = geoData.get('geoH')[slices]
 u['g'] = geoData.get('geoU')[slices]
 v['g'] = geoData.get('geoV')[slices]
 
-
+#h['g'] = H
+#u['g'] = 0.
+#v['g'] = 0.
 
 
 solver.stop_iteration = num_iter

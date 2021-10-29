@@ -28,7 +28,8 @@ class Analysis:
         self.exp_name = 'Ro{}Bu{}Lr{}Ur{}'.format(self.Ro, self.Bu, self.Lr, self.Ur)
         self.exp_dir = '../experiments/' + self.exp_name + '/'
         self.data_file_name = self.exp_dir + 'data/data_s1.h5'
-
+        self.vortex_dir = '../vortices/'
+        self.vortex_name = 'Ro{}Bu{}_vortex.h5'.format(self.Ro, self.Bu)
 
         self.par_dict = pickle.load(open(self.exp_dir + 'IC/parameters.pkl', 'rb'))
         
@@ -61,7 +62,11 @@ class Analysis:
         self.l_array = fft.fftshift(fft.fftfreq(self.ny, d=self.dx))*np.pi*2
         self.omega_array = fft.fftshift(fft.fftfreq(self.nt, d=self.dt)*2 *np.pi)
         print (np.shape(self.u))
-        
+    
+    def vorticity(self):
+        vx = np.gradient(self.v[0], axis = 0)/self.dx
+        uy = np.gradient(self.u[0], axis = 1)/self.dx
+        return vx - uy
 
     def filter_vortex(self, data):
         
@@ -159,6 +164,7 @@ class Analysis:
         h_fft_time_space = fft.fftshift(fft.fft2(h_fft_time), axes=(1,2))
         return h_fft_time_space
     
+
     
     def wave_propogation_spectra_omega(self,  data):
         
@@ -263,10 +269,10 @@ class Analysis:
 #        flux = self.flux_vector()
 #        return np.linalg.norm(flux, axis= 0)
 #    
-#    def flux_wave_averaged(self, omega):
+#    def flux_wave_averaged(self,):
 #        fx, fy = self.flux_vector()
 #        t_index = 0
-#        wave_period = np.pi*2/omega
+#        wave_period = np.pi*2/self.omega
 #        t_length = int(wave_period/(self.dt)) # this shouold be an input
 #        print ('wave_period from flux wave_averaged:   ', wave_period,t_index, t_length, (self.dt) )
 #        fx = fx[t_index: t_index + t_length + 0 , :, :]
@@ -275,9 +281,9 @@ class Analysis:
 #        fy_average = np.trapz(fy, dx = self.dt,  axis = 0)
 #        
 #        return np.array([fx_average, fy_average])/(t_length*self.dt)
-#    
-#    def flux_wave_averaged_mag(self,  omega):
-#        return np.linalg.norm(self.flux_wave_averaged( omega), axis = 0)
+    
+#    def flux_wave_averaged_mag(self):
+#        return np.linalg.norm(self.flux_wave_averaged(), axis = 0)
 #    
 #    def flux_difference(self):
 #        flux_mag = self.flux_wave_averaged_mag(self.omega)
@@ -291,23 +297,28 @@ class Analysis:
     
     
     def flux_omega_averaged(self):
-        t_passed_vortex = self.Ly/self.c_rot*0.9
+        t_passed_vortex = self.Ly/self.c_rot*1# possible error if wave hasnt reached full domain
         t1 = self.closest_ind(self.time_axis, t_passed_vortex)
         wave_period = np.pi*2/self.omega
-        wave_average = wave_period*5
+        wave_average = wave_period*1
         
-        t2 = t1 + int(wave_average/self.dt) 
+        t2 = self.closest_ind(self.time_axis, t_passed_vortex + wave_average) #possible error if sim time isntl longe enougy
         
         #print (np.max(self.x_axis), self. Ly/2, self.wavelength)
-        zoom_index=  200
-        x1 =  zoom_index  #self.closest_ind(self.x_axis , -self.Ly/2 + self.wavelength*2)
-        x2 =  self.nx - zoom_index  #self.closest_ind(self.x_axis , self.Ly/2 - self.wavelength*2)
+#        zoom_index=  200
+#        x1 =  zoom_index  #self.closest_ind(self.x_axis , -self.Lx/2 + self.wavelength*2)
+#        x2 =  self.nx - zoom_index  #self.closest_ind(self.x_axis , self.Lx/2 - self.wavelength*2)
         
+        
+        x1 =  self.closest_ind(self.x_axis , -self.Ly/2 + self.wavelength)
+        x2 = self.closest_ind(self.x_axis , self.Ly/2 - self.wavelength)
+        
+#        x1, x2 = 100, 400
         
         # cropped fields 
         u_crop = self.u[t1:t2, x1:x2, x1:x2]
         v_crop = self.v[t1:t2, x1:x2, x1:x2]
-        h_crop = self.h[t1:t2, x1:x2, x1:x2] - self.H
+        h_crop = self.h[t1:t2, x1:x2, x1:x2] 
         t_crop = self.time_axis[t1:t2]
         
         
@@ -319,11 +330,11 @@ class Analysis:
         v_fft_time = fft.fftshift(fft.fft(v_crop, axis = 0), axes=(0,))
         h_fft_time = fft.fftshift(fft.fft(h_crop, axis = 0), axes=(0,))
         
-        N = 100
+        N = 41
         dt_fine = wave_period/N
-        t_fine = np.arange(t_crop[0], t_crop[0] + wave_average + dt_fine , dt_fine)
+        #t_fine = np.arange(t_crop[0], t_crop[0] + wave_average + dt_fine , dt_fine)
         
-       # t_fine = np.linspace(t_crop[0], t_crop[0] + wave_average, N)
+        t_fine = np.linspace(t_crop[0], t_crop[0] + wave_average, N)
         
         def create_wave(sin_coeff, cos_coeff, time, omega):
             return sin_coeff*np.sin(time[:, None, None]*omega) + cos_coeff*np.cos(time[:, None, None]*omega)
@@ -346,8 +357,206 @@ class Analysis:
         fx_average = np.trapz(Fx, dx = self.dt,  axis = 0)/wave_average
         fy_average = np.trapz(Fy, dx = self.dt,  axis = 0)/wave_average
         
-        return fx_average, fy_average
+        Fm = np.sqrt(fx_average**2 +fy_average**2)
+        
+        flux_diff = (np.max(Fm) - np.min(Fm))/Fm[int((x2-x1)/2),int((x2-x1)/5) ]
+#        print (2)
+#        print( np.min(Fm), np.max(Fm), Fm[int((x2-x1)/2),int((x2-x1)/5)])
+        return fx_average, fy_average, flux_diff
     
+    def flux_full_averaged(self):
+        
+                
+        geoData = h5py.File(self.exp_dir + 'IC/' + 'expanded_' + self.vortex_name , 'r')
+
+        hv = geoData.get('geoH')
+        uv = geoData.get('geoU')
+        vv = geoData.get('geoV')
+        
+        u_sub = np.subtract(self.u, uv)
+        v_sub = np.subtract(self.v, vv)
+        h_sub = np.subtract(self.h, hv) + self.H
+        
+        plt.imshow(h_sub[-1])
+        plt.colorbar()
+        plt.show()
+        
+        t_passed_vortex = self.Ly/self.c_rot*0.9
+        t1 = self.closest_ind(self.time_axis, t_passed_vortex)
+        wave_period = np.pi*2/self.omega
+        wave_average = wave_period*2
+        
+        t2 = self.closest_ind(self.time_axis, t_passed_vortex + wave_average) +1
+        
+        #print (np.max(self.x_axis), self. Ly/2, self.wavelength)
+#        zoom_index=  200
+#        x1 =  zoom_index  #self.closest_ind(self.x_axis , -self.Lx/2 + self.wavelength*2)
+#        x2 =  self.nx - zoom_index  #self.closest_ind(self.x_axis , self.Lx/2 - self.wavelength*2)
+        
+        
+        x1 = self.closest_ind(self.x_axis , -self.Ly/2 + self.wavelength)
+        x2 = self.closest_ind(self.x_axis , self.Ly/2 - self.wavelength)
+        
+        # cropped fields 
+        u_crop = u_sub[t1:t2, x1:x2, x1:x2]
+        v_crop = v_sub[t1:t2, x1:x2, x1:x2]
+        h_crop = h_sub[t1:t2, x1:x2, x1:x2] 
+        t_crop = self.time_axis[t1:t2]
+        
+
+        u_squared = u_crop**2 + v_crop**2
+        mult = self.g*h_crop**2  + h_crop*u_squared/2 
+        Fx = u_crop*mult
+        Fy = v_crop*mult
+        
+        
+        
+        fx_average = np.trapz(Fx, dx = self.dt,  axis = 0)/wave_average
+        fy_average = np.trapz(Fy, dx = self.dt,  axis = 0)/wave_average
+        
+
+
+        
+        return np.real(fx_average), np.real(fy_average)
+    
+    
+    def filter_flux(self):
+        
+        t_passed_vortex = self.Ly/self.c_rot*0.9
+        t_passed_vortex_index, t_passed_closest_val = min(enumerate(self.time_axis), 
+                                  key=lambda x: abs(x[1]-t_passed_vortex))
+        print (t_passed_vortex_index, 't_passed vortex index HERE')
+        
+        cropped_omega_array =  fft.fftshift(fft.fftfreq(self.nt - t_passed_vortex_index, d=self.dt)*2 *np.pi)
+        
+        omega1_ind, closest_val = min(enumerate(cropped_omega_array), 
+                                  key=lambda x: abs(x[1]+self.omega/3.))
+        
+        omega2_ind, closest_val = min(enumerate(cropped_omega_array), 
+                                  key=lambda x: abs(x[1]-self.omega/3.))
+        
+        
+        u_crop = self.u[t_passed_vortex_index:, :, :]
+        u_fft =fft.fftshift(fft.fft(u_crop, axis = 0), axes=(0,))
+        v_crop = self.u[t_passed_vortex_index:, :, :]
+        v_fft =fft.fftshift(fft.fft(v_crop, axis = 0), axes=(0,))
+        h_crop = self.u[t_passed_vortex_index:, :, :]
+        h_fft =fft.fftshift(fft.fft(h_crop, axis = 0), axes=(0,))
+        
+        u_fft[omega1_ind:omega2_ind, :, :] = 0.0
+        v_fft[omega1_ind:omega2_ind, :, :] = 0.0
+        h_fft[omega1_ind:omega2_ind, :, :] = 0.0
+
+        
+        uw = np.real(fft.ifft(fft.ifftshift(u_fft, axes=(0,)), axis = 0))
+        vw = np.real(fft.ifft(fft.ifftshift(v_fft, axes=(0,)), axis = 0))
+        hw = np.real(fft.ifft(fft.ifftshift(h_fft, axes=(0,)), axis = 0))
+        
+        t2 = self.closest_ind(self.time_axis, t_passed_vortex + np.pi*2/self.omega) +1
+
+        
+        
+        Fx, Fy = self.flux(uw, vw, hw)
+        fx_average = np.trapz(Fx[:t2, :, :], dx = self.dt,  axis = 0)
+        fy_average = np.trapz(Fy[:t2, :, :], dx = self.dt,  axis = 0)
+        
+        return fx_average, fy_average
+#    
+#    
+    def flux_omega_averaged_2(self):
+        t_passed_vortex = self.Ly/self.c_rot*1 # possible error if wave hasnt reached full domain
+        t1 = self.closest_ind(self.time_axis, t_passed_vortex)
+        wave_period = np.pi*2/self.omega
+        wave_average = wave_period*2
+        
+        t2 = self.closest_ind(self.time_axis, t_passed_vortex + wave_average) + 1#possible error if sim time isntl longe enougy
+        
+        #print (np.max(self.x_axis), self. Ly/2, self.wavelength)
+#        zoom_index=  200
+#        x1 =  zoom_index  #self.closest_ind(self.x_axis , -self.Lx/2 + self.wavelength*2)
+#        x2 =  self.nx - zoom_index  #self.closest_ind(self.x_axis , self.Lx/2 - self.wavelength*2)
+        
+        
+        x1 =  self.closest_ind(self.x_axis , -self.Ly/2 + self.wavelength)
+        x2 = self.closest_ind(self.x_axis , self.Ly/2 - self.wavelength)
+        
+        
+
+
+        u_crop = self.u[t1:t2]
+        v_crop = self.v[t1:t2]
+        h_crop = self.h[t1:t2] 
+        t_crop = self.time_axis[t1:t2]
+        
+        yp, xp = 256, 100
+        
+        plt.scatter(t_crop, h_crop[:, yp, xp])
+        plt.plot(self.time_axis, self.h[:, yp, xp])
+        plt.title('wave averaged points used')
+        plt.show()
+        
+        omega_array =  fft.fftshift(fft.fftfreq(len(t_crop), d=self.dt)*2 *np.pi)
+        omega_ind = self.closest_ind(omega_array, self.omega)
+        omega_ind_2 = self.closest_ind(omega_array, -self.omega)
+        
+        u_fft_time = fft.fftshift(fft.fft(u_crop, axis = 0), axes=(0,))
+        v_fft_time = fft.fftshift(fft.fft(v_crop, axis = 0), axes=(0,))
+        h_fft_time = fft.fftshift(fft.fft(h_crop, axis = 0), axes=(0,))
+        
+        u_omega = np.zeros(np.shape(u_fft_time), dtype = complex)
+        v_omega = np.zeros(np.shape(v_fft_time), dtype = complex)
+        h_omega = np.zeros(np.shape(h_fft_time), dtype = complex)
+        
+        
+#        zero_freq = self.closest_ind(omega_array, 0)
+##        
+##        u_fft_time[zero_freq] = 0.0
+##        v_fft_time[zero_freq] = 0.0
+##        h_fft_time[zero_freq] = 0.0
+##        
+#        u_omega = u_fft_time
+#        v_omega = v_fft_time
+#        h_omega = h_fft_time
+#        
+#        
+#        
+        plt.scatter(omega_array/self.omega, h_fft_time[:, yp, xp])
+        plt.title('fourier transform')
+        plt.show()
+        
+        u_omega[omega_ind] = u_fft_time[omega_ind]
+        v_omega[omega_ind] = v_fft_time[omega_ind]
+        h_omega[omega_ind] = h_fft_time[omega_ind]
+        u_omega[omega_ind_2] = u_fft_time[omega_ind_2]
+        v_omega[omega_ind_2] = v_fft_time[omega_ind_2]
+        h_omega[omega_ind_2] = h_fft_time[omega_ind_2]
+        
+        uw = np.real(fft.ifft(fft.ifftshift(u_omega, axes=(0,)), axis = 0))
+        vw = np.real(fft.ifft(fft.ifftshift(v_omega, axes=(0,)), axis = 0))
+        hw = np.real(fft.ifft(fft.ifftshift(h_omega, axes=(0,)), axis = 0)) +self.H
+        
+        plt.scatter(t_crop, hw[:, yp, xp])
+        plt.scatter(t_crop, h_crop[:, yp, xp])
+        plt.title('wave vs crop')
+        plt.show()
+        
+        Fx, Fy = self.flux(uw, vw, hw)
+        
+#        plt.imshow(Fx[-1])
+#        plt.title('Fx ')
+#        plt.colorbar()
+#        plt.show()
+#        
+#        plt.imshow(Fy[-1])
+#        plt.title('Fy ')
+#        plt.colorbar()
+#        plt.show()
+        
+        fx_average = np.trapz(Fx, dx = self.dt,  axis = 0)/wave_average
+        fy_average = np.trapz(Fy, dx = self.dt,  axis = 0)/wave_average
+        
+        return fx_average, fy_average    
+#    
 #    def flux_difference_omega(self):
 #        fx, fy = self.flux_omega_averaged()
 #        flux_mag = np.sqrt(fx**2 + fy**2 )
@@ -373,11 +582,15 @@ class Analysis:
         index, val =  min (enumerate(array), key=lambda x: abs(x[1]-value))
         return index
 
+    def flux(self, u, v, h):
+        u_squared = u**2 + v**2
+        mult = self.g*h**2  + h*u_squared/2 
+        Fx = u*mult
+        Fy = v*mult
+        return Fx, Fy
 
 
-
-
-
+    
         
         
         

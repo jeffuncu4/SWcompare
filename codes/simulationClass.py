@@ -45,7 +45,7 @@ class Simulation:
         
         self.Re = 1e6
         self.sponge_decay = 0.05
-        self.forcing_decay = 0.2
+        self.forcing_decay = 1. #0.2
         
         #CONSTANTS
         self.g = 9.81 # m/s**2 
@@ -63,6 +63,7 @@ class Simulation:
  
         self.l = np.pi*2/self.wavelength
         self.omega = np.sqrt(self.g*self.l**2*self.H + self.f**2)
+        self.T_wave = np.pi*2/self.omega   
        
         self.hw = self.l*self.H*self.uw/self.f
         self.vw = self.uw*self.omega/self.f
@@ -70,11 +71,7 @@ class Simulation:
         self.tau_w = self.forcing_decay*2*np.pi/self.omega
         self.c = np.sqrt(self.g*self.H)
         self.Ld = self.c/self.f
-        
-#        print (omega, 'omega')
-        self.l = np.pi*2/self.wavelength
-        self.omega = np.sqrt(self.g*self.l**2*self.H + self.f**2)
-        
+      
         
         
         #Simulations  non dimensional numbers
@@ -97,8 +94,31 @@ class Simulation:
         self.CFL_constant = 0.002
         
         self.dx = 500 # m
-        self.dt = self.CFL_constant*self.dx/self.ug # seconds
+        self.dt_cfl = self.CFL_constant*self.dx/self.ug # some sort of round function to nearest integer divsion of wave period
+        # because wave_period == dt*N whre is N is integer must be true for flux calc
          
+            
+
+        def round_dt(dt_orig, wave_period):
+    
+            N = 8
+            save_iter = 0
+            dt_diff = 1.
+            new_dt = None
+            while dt_diff >= 0 :
+                wave_fraction = wave_period/N
+                #print (N, wave_fraction)
+                dt_diff = wave_fraction - dt_orig
+                new_dt = wave_fraction
+                N+= 8
+                save_iter+= 1
+                #print (save_iter)
+            return new_dt, save_iter
+        
+        
+        self.dt, self.save_iter  = round_dt(self.dt_cfl, self.T_wave)
+    
+        
         # The resulting parameters are
         self.mu = self.ug*self.dx**3/self.Re  #m^4/s
         # not true if you use CFL
@@ -115,14 +135,12 @@ class Simulation:
         self.inertial_period = np.pi*2/self.f
         self.c_rot = self.omega/self.l
         self.num_periods = self.Ly*4./3./self.c_rot/self.inertial_period 
-        self.Ts = self.Ly/self.c_rot*1.3
+        self.Ts = self.Ly/self.c_rot*4./3
         
         #Other Numbers which are relevant 
-        self.T_wave = np.pi*2/self.omega        
+             
         
-        saved_points_per_wave_period = 10
-        dt_save = self.T_wave/saved_points_per_wave_period
-        self.save_iter = int(dt_save/self.dt)
+
         
         #self.save_iter = 10 # function of wave period main sim save iteration
         self.num_iter = int(self.Ts/self.dt)
