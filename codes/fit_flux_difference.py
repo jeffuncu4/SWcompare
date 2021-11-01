@@ -22,6 +22,7 @@ Ur = [1000.]
 def run_and_flux(Ros, Bus, Lrs, Urs):
     #flux_fields = []
     fd  = []
+    vort = []
     #vort = []
     for ro, bu, lr, ur in it.product(Ros, Bus, Lrs, Urs):
         exp_name = 'Ro{}Bu{}Lr{}Ur{}'.format(ro,bu,lr,ur)
@@ -29,67 +30,73 @@ def run_and_flux(Ros, Bus, Lrs, Urs):
         exp.run_sim()
         fx, fy, flux_diff = exp.analysis.flux_omega_averaged()
         fd.append(flux_diff)
+        max_vort = np.max(np.abs(exp.analysis.vorticity()))
+        vort.append(max_vort/exp.f)
 
-    return fd
+    return fd, vort
 
 #
+
+
+fd, vort = run_and_flux(Ro, Bu, Lr, Ur)
+im = np.array(fd).reshape(3, 5)
+
+print (im, im.shape)
+
+#plt.imshow(im)
+#plt.colorbar()
+#plt.show()
+
+#plt.plot(Bu, im[0, :])
+#plt.plot(Bu, im[1, :])
+#plt.plot(Bu, im[2, :])
+##plt.plot(Bu, im[3, :])
+#plt.show()
+
+
+vort = np.array(vort).reshape(3, 5)
+vortR = vort[:, 0]
+
+print (np.shape(vortR))
+
+bb, rr= np.meshgrid(Bu, vortR)
+
+
+xdata = np.vstack((bb.ravel(), rr.ravel()))
+ydata = im.ravel()
+
+
+def fit_guess(x, y, A, alpha, beta):
+    return A*x**(alpha)*y**(beta)
+
+def _fit_guess(M, *args):
+    x, y = M
+    arr = fit_guess(x, y, *args)
+    return arr
+    
+
+p0 = (0.1, 1, 1)
 #
-#
-#fd = run_and_flux(Ro, Bu, Lr, Ur)
-#im = np.array(fd).reshape(3, 5)
-#
-#print (im, im.shape)
-#
-##plt.imshow(im)
-##plt.colorbar()
-##plt.show()
-#
-##plt.plot(Bu, im[0, :])
-##plt.plot(Bu, im[1, :])
-##plt.plot(Bu, im[2, :])
-###plt.plot(Bu, im[3, :])
-##plt.show()
-#
-#
-#
-#bb, rr= np.meshgrid(Bu, Ro)
-#
-#
-#xdata = np.vstack((bb.ravel(), rr.ravel()))
-#ydata = im.ravel()
-#
-#
-#def fit_guess(x, y, A, alpha, beta):
-#    return A*x**(alpha)*y**(beta)
-#
-#def _fit_guess(M, *args):
-#    x, y = M
-#    arr = fit_guess(x, y, *args)
-#    return arr
-#    
-#
-#p0 = (0.1, 1, 1)
-##
-#popt, pcov = curve_fit(_fit_guess, xdata, ydata, p0)
-#
-#print (popt, 'A', 'alpha', 'beta')
-#print (pcov)
-#fit = np.zeros(im.shape)
-#fit = fit_guess(bb, rr, *popt)
-#
-#
-##for i in range(3):
-##    plt.plot(Bu, fit[i, :], label = 'fit')
-##    plt.plot(Bu, im[i, :], label  = 'flux')
-##
-##plt.xlabel('Bu')
-##plt.legend()
-##plt.show()
-#
-##plt.imshow(fit)
-##plt.show()
-#
-#print (fit-im)
+popt, pcov = curve_fit(_fit_guess, xdata, ydata, p0)
+
+print (popt, 'A', 'alpha', 'beta')
+print (pcov)
+fit = np.zeros(im.shape)
+fit = fit_guess(bb, rr, *popt)
+
+
+for i in range(3):
+    plt.plot(Bu, fit[i, :], label = 'fit')
+    plt.plot(Bu, im[i, :], label  = 'flux')
+
+plt.xlabel('Bu')
+plt.legend()
+plt.show()
+
+plt.imshow(fit)
+plt.show()
+
+
 #
 ## lets predict now
 #Ro2 = [0.008]
@@ -115,8 +122,8 @@ def run_and_flux(Ros, Bus, Lrs, Urs):
 ##plt.legend()
 ##plt.legend()
 ##plt.show()
-#
 ##
+###
 #for i in range(3):
 #    plt.plot(Bu, fit[i, :], label = 'fit')
 #    plt.scatter(Bu, im[i, :], label  = 'flux')
@@ -129,8 +136,8 @@ def run_and_flux(Ros, Bus, Lrs, Urs):
 #plt.legend()
 #plt.show()
 #
-
-
+#
+#
 
 
 
