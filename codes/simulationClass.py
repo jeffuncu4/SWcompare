@@ -84,11 +84,11 @@ class Simulation:
 #            self.nx = 640
 #        else:
 #            self.nx = 1280
-#            
-        if self.Lr >=1:
-            self.nx = 512
-        else:
-            self.nx = 1024
+        self.nx= 512     
+#        if self.Lr >=1:
+#            self.nx = 512
+#        else:
+#            self.nx = 1024
         # I choose to define dx, dt for the simulation Nondim# 
         #Keep in mind I neeed to satisfy some sort of cfl condition with dt <  C*dx/U
         self.CFL_constant = 0.002
@@ -244,7 +244,7 @@ class Simulation:
         self.create_sim(run_if_created)
         self.run_vortex_sim(run_if_created)
         self.run_main_sim(run_if_created)
-        self.make_uvh_videos(run_if_created)
+        #self.make_uvh_videos(run_if_created)
 
 
 #

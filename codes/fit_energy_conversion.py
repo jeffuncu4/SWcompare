@@ -1,10 +1,11 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 29 08:38:48 2021
+Created on Fri Nov  5 08:40:45 2021
 
 @author: jeff
 """
+
 
 from simulationClass import Simulation 
 import numpy as np
@@ -23,17 +24,21 @@ def run_and_flux(Ros, Bus, Lrs, Urs):
     #flux_fields = []
     fd  = []
     vort = []
+    energy_conv = []
     #vort = []
     for ro, bu, lr, ur in it.product(Ros, Bus, Lrs, Urs):
         exp_name = 'Ro{}Bu{}Lr{}Ur{}'.format(ro,bu,lr,ur)
         exp = Simulation(ro, bu, lr, ur)
         exp.run_sim()
-        fx, fy, flux_diff = exp.analysis.flux_omega_averaged()
-        fd.append(flux_diff)
+        
+        ana = exp.analysis#        
+        ec, _  = ana.wavenumber_circle()
+        energy_conv.append(ec)
         max_vort = np.max(np.abs(exp.analysis.vorticity()))
-        vort.append(max_vort/exp.f)
+        vort.append(max_vort)
 
-    return fd, vort
+
+    return energy_conv, vort
 
 #
 
@@ -60,7 +65,7 @@ vortR = vort[:, 0]
 print (np.shape(vortR))
 
 bb, rr= np.meshgrid(Bu, vortR)
-
+bb, rr= np.meshgrid(Bu, Ro)
 
 xdata = np.vstack((bb.ravel(), rr.ravel()))
 ydata = im.ravel()
@@ -87,7 +92,7 @@ fit = fit_guess(bb, rr, *popt)
 
 for i in range(3):
     plt.plot(Bu, fit[i, :], label = 'fit')
-    plt.plot(Bu, im[i, :], label  = 'flux')
+    plt.scatter(Bu, im[i, :], label  = 'flux')
 
 plt.xlabel('Bu')
 plt.legend()
@@ -138,8 +143,7 @@ plt.show()
 #
 #
 #
-plt.scatter(Ro, vortR)
-plt.show()
+
 
 
 

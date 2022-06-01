@@ -1,10 +1,11 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 29 08:38:48 2021
+Created on Fri Nov  5 08:40:45 2021
 
 @author: jeff
 """
+
 
 from simulationClass import Simulation 
 import numpy as np
@@ -13,33 +14,48 @@ from scipy.optimize import curve_fit
 import itertools as it
 
 
+
+
 Ro = [0.005, 0.01, 0.02 ]
-Bu = np.array([0.5, 0.9, 1., 1.1, 1.5])
-Lr = [2.0]
+Bu = [1.]
+Lr = [ 1., 2., 3., 4.]
 Ur = [1000.]
+
+
+
+#Ro = [ 0.01, 0.02 ]
+#Bu = [1.]
+#Lr = [ 2., 3.]
+#Ur = [1000.]
 
 
 def run_and_flux(Ros, Bus, Lrs, Urs):
     #flux_fields = []
     fd  = []
     vort = []
+    energy_conv = []
+    angle = []
     #vort = []
     for ro, bu, lr, ur in it.product(Ros, Bus, Lrs, Urs):
         exp_name = 'Ro{}Bu{}Lr{}Ur{}'.format(ro,bu,lr,ur)
         exp = Simulation(ro, bu, lr, ur)
         exp.run_sim()
-        fx, fy, flux_diff = exp.analysis.flux_omega_averaged()
-        fd.append(flux_diff)
+        
+        ana = exp.analysis#        
+        ec, _, ang = ana.wavenumber_circle()
+        energy_conv.append(ec)
+        angle.append(ang)
         max_vort = np.max(np.abs(exp.analysis.vorticity()))
-        vort.append(max_vort/exp.f)
+        vort.append(max_vort)
 
-    return fd, vort
+
+    return energy_conv, angle, vort
 
 #
 
 
-fd, vort = run_and_flux(Ro, Bu, Lr, Ur)
-im = np.array(fd).reshape(3, 5)
+ec, angle, vort = run_and_flux(Ro, Bu, Lr, Ur)
+im = np.array(angle).reshape(3, 4)
 
 print (im, im.shape)
 
@@ -54,47 +70,55 @@ print (im, im.shape)
 #plt.show()
 
 
-vort = np.array(vort).reshape(3, 5)
+vort = np.array(vort).reshape(3, 4)
 vortR = vort[:, 0]
 
 print (np.shape(vortR))
 
-bb, rr= np.meshgrid(Bu, vortR)
-
+bb, rr= np.meshgrid(Lr, vortR)
+#bb, rr= np.meshgrid(Lr, Ro)
 
 xdata = np.vstack((bb.ravel(), rr.ravel()))
 ydata = im.ravel()
 
 
-def fit_guess(x, y, A, alpha, beta):
-    return A*x**(alpha)*y**(beta)
-
-def _fit_guess(M, *args):
-    x, y = M
-    arr = fit_guess(x, y, *args)
-    return arr
-    
-
-p0 = (0.1, 1, 1)
-#
-popt, pcov = curve_fit(_fit_guess, xdata, ydata, p0)
-
-print (popt, 'A', 'alpha', 'beta')
-print (pcov)
-fit = np.zeros(im.shape)
-fit = fit_guess(bb, rr, *popt)
-
 
 for i in range(3):
-    plt.plot(Bu, fit[i, :], label = 'fit')
-    plt.plot(Bu, im[i, :], label  = 'flux')
+    plt.plot(Lr, (im[i, :]-np.pi)*180/np.pi)
 
-plt.xlabel('Bu')
-plt.legend()
+
 plt.show()
 
-plt.imshow(fit)
-plt.show()
+
+#def fit_guess(x, y, A, alpha, beta):
+#    return A*x**(alpha)*y**(beta)
+#
+#def _fit_guess(M, *args):
+#    x, y = M
+#    arr = fit_guess(x, y, *args)
+#    return arr
+#    
+#
+#p0 = (0.1, 1, 1)
+##
+#popt, pcov = curve_fit(_fit_guess, xdata, ydata, p0)
+#
+#print (popt, 'A', 'alpha', 'beta')
+#print (pcov)
+#fit = np.zeros(im.shape)
+#fit = fit_guess(bb, rr, *popt)
+#
+#
+#for i in range(3):
+#    plt.plot(Lr, fit[i, :], label = 'fit')
+#    plt.scatter(Lr, im[i, :], label  = 'flux')
+#
+#plt.xlabel('Bu')
+#plt.legend()
+#plt.show()
+
+#plt.imshow(fit)
+#plt.show()
 
 
 #
@@ -138,8 +162,7 @@ plt.show()
 #
 #
 #
-plt.scatter(Ro, vortR)
-plt.show()
+
 
 
 

@@ -24,13 +24,7 @@ def analysis_iterator(Ros, Bus, Lrs, Urs):
                     exp = Simulation(ro, bu, lr, ur)
                     exp.run_sim()
                     #exp.plots.view('h')
-                    fx, fy, flux_diff = exp.analysis.flux_omega_averaged()
-                    #fx, fy = exp.analysis.flux_mag_averaged()
-                    Fm = np.sqrt(fx**2 +fy**2)
-#                    plt.imshow(np.abs(exp.analysis.vorticity()))
-#                    plt.colorbar()
-#                    plt.show()
-                    max_vort = np.max(np.abs(exp.analysis.vorticity()))
+
 #                    plt.imshow(Fm)
 #                    plt.title(exp_name + 'Flux')
 #                    plt.colorbar()
@@ -42,12 +36,27 @@ def analysis_iterator(Ros, Bus, Lrs, Urs):
 #                    plt.title(exp_name + 'Flux')
 #                    plt.colorbar()
 #                    plt.show()
-                    
-                    flux_fields.append(Fm)
-                    fd.append(flux_diff)
-                    vort.append(max_vort/exp.f)
-    return flux_fields, fd, vort
 
+    return None
+
+
+#Ro = [ 0.004 ]
+#Bu = np.array([0.5, 0.9, 1., 1.1, 1.5])
+#Lr = [ 1., 2., 3., 4.]
+#Ur = [1000.]
+
+Ro = [ 0.004 ]
+Bu = [1.]
+Lr = [2.]
+Ur = [1000.]
+
+Ro = [ 0.02 ]
+Bu = [1.]
+Lr = [2.]
+Ur = [1000.]
+
+
+analysis_iterator(Ro, Bu, Lr, Ur)
 
 
 #
@@ -74,16 +83,9 @@ def analysis_iterator(Ros, Bus, Lrs, Urs):
 #Lr = [0.5, 1, 2, 3, 4]
 #Ur = [1000.]
 
-Ro = [0.005, 0.008, 0.01, 0.02 ]
-Bu = [0.5, 0.9, 1., 1.1, 1.5]
-Lr = [2.0]
-Ur = [1000.]
 
 
-f, d, vort = analysis_iterator(Ro, Bu, Lr, Ur)
-print (vort)
 
-im = np.array(d).reshape(4, 5)
 
 
 #
